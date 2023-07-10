@@ -1,0 +1,18 @@
+/* Style untuk tombol */
+.estetik-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    text-align: center;
+    text-decoration: none;
+    background-color: #ee7b11;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+/* Hover state */
+.estetik-button:hover {
+    background-color: #ff810c;
+}

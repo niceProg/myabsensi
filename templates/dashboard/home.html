@@ -1,0 +1,7 @@
+{% extends 'layout/templates_dashboard.html' %} {% block content %} {% include 'components/nav_dashboard.html' %}
+<div id="layoutSidenav">
+    <div id="layoutSidenav_nav">{% include 'components/sidenav_dashboard.html' %}</div>
+    <div id="layoutSidenav_content">{% include 'dashboard/main_content.html' %} {% include 'dashboard/footer_content.html' %}</div>
+</div>
+
+{% endblock content %}

@@ -1,0 +1,33 @@
+{% extends 'layout/templates_dashboard.html' %} {% block content %} {% include 'components/nav_dashboard.html' %}
+<div id="layoutSidenav">
+    <div id="layoutSidenav_nav">{% include 'components/sidenav_dashboard.html' %}</div>
+    <div id="layoutSidenav_content">
+        <section class="py-1">
+            <div class="row mt-5">
+                <div class="col-md-3 offset-lg-2">
+                    <h3>Generate Dataset {{ prs }}</h3>
+                    <hr />
+                    <img
+                        src="{{ url_for('Dashboard.vidfeed_dataset', id=id) }}"
+                        width="100%"
+                        class="img-thumbnail"
+                    />
+                </div>
+            </div>
+
+            <br />
+            <div class="row">
+                <div class="col-md-3 offset-lg-2">
+                    <a
+                        class="btn btn-warning btn-lg"
+                        href="{{ url_for('Dashboard.train_classifier', id=id) }}"
+                    >
+                        Training
+                    </a>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+{% endblock content %}
