@@ -1,0 +1,47 @@
+/* Style for the export (CSV) button */
+#Print {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #676968;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    transition: background-color 0.3s ease;
+}
+
+#Print:hover {
+    background-color: #45a049;
+}
+
+/* Print styles */
+@media print {
+    body {
+        font-family: Arial, sans-serif;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+    }
+
+    th,
+    td {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+
+    th {
+        background-color: #f2f2f2;
+    }
+
+    tbody tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    #Print {
+        display: none; /* Hide the export button when printing */
+    }
+}

@@ -1,55 +1,97 @@
 // Fungsi untuk akses masuk
+// function aksesMasuk() {
+//     navigator.mediaDevices
+//         .getUserMedia({ video: true })
+//         .then(function (stream) {
+//             // Mendapatkan elemen video
+//             var video = document.getElementById('videoElement');
+
+//             // Mengubah sumber video ke URL feed kamera akses masuk
+//             video.src = Masuk + '?mode=masuk';
+//             // video.src = url;
+//         })
+//         .catch(function (error) {
+//             console.error('Tidak dapat mengakses kamera: ', error);
+//         });
+// }
+
 function aksesMasuk() {
-    // Mendapatkan elemen video
-    var video = document.getElementById('videoElement');
+    // Mendapatkan posisi saat ini
+    if ('geolocation' in navigator) {
+        var options = {
+            enableHighAccuracy: true,
+        };
 
-    // Mengubah sumber video ke URL feed kamera akses masuk
-    video.src = Masuk + '?mode=masuk';
-    // video.src = url;
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                var userLat = position.coords.latitude;
+                var userLon = position.coords.longitude;
 
-    fetch('/absensi/mark_attendance', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.success) {
-                console.log(data);
-                if (data.confidence > 70) {
-                    // Menampilkan data identitas karyawan jika berhasil
-                    const karyawanContainer = document.getElementById('karyawan-container');
-                    karyawanContainer.innerHTML = `
-                        <p>Nama: ${data.data_karyawan.nama}</p>
-                        <p>Jabatan: ${data.data_karyawan.jabatan}</p>
-                        <p>NIDN / NIPY: ${data.data_karyawan.nidn_nipy}</p>
-                        <p>Jenis Kelamin: ${data.data_karyawan.jkl}</p>
-                    `;
+                console.log('Latitude:', userLat);
+                console.log('Longitude:', userLon);
+
+                var officeLat = -7.0052185; // Latitude kantor
+                var officeLon = 109.1423485; // Longitude kantor
+
+                var R = 6371; // Radius bumi dalam kilometer
+                var dLat = toRad(officeLat - userLat);
+                var dLon = toRad(officeLon - userLon);
+                var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(toRad(userLat)) * Math.cos(toRad(officeLat)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                var distance = R * c; // Jarak dalam kilometer
+
+                if (distance <= 0.2) {
+                    // Karyawan berada dalam radius kantor
+                    Swal.fire('Sukses!', 'Anda berada di lokasi kampus. Silahkan atur sisi wajah untuk mencatat absen ', 'success');
+                    navigator.mediaDevices
+                        .getUserMedia({ video: true })
+                        .then(function (stream) {
+                            // Mendapatkan elemen video
+                            var video = document.getElementById('videoElement');
+
+                            // Mengubah sumber video ke URL feed kamera akses masuk
+                            video.src = Masuk + '?mode=masuk';
+                            // video.src = url;
+                        })
+                        .catch(function (error) {
+                            Swal.fire('Oops...', 'Anda menolak izin akses kamera', 'error');
+                            console.error('Tidak dapat mengakses kamera: ', error);
+                        });
                 } else {
-                    // Menampilkan pesan jika tingkat kepercayaan di bawah 70%
-                    // alert('Tingkat kepercayaan deteksi wajah kurang dari 70%');
-                    karyawanContainer.innerHTML = `<p>${data.message}</p>`;
+                    // Karyawan berada di luar radius kantor
+                    Swal.fire('Oops...', 'Anda tidak berada dalam radius kantor.', 'error');
                 }
-            } else {
-                alert(data.message);
-                // const karyawanContainer = document.getElementById('karyawan-container');
-                // // Menampilkan pesan jika gagal
-                // karyawanContainer.innerHTML = `<p>${data.message}</p>`;
-                // alert(data.message);
-            }
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        });
+            },
+            function (error) {
+                Swal.fire('Oops...', 'Anda menolak izin akses lokasi', 'error');
+                console.error('Tidak dapat mengakses geolocation: ', error);
+                // Tindakan jika akses geolocation ditolak atau gagal
+            },
+            options,
+        );
+    } else {
+        // Perangkat tidak mendukung geolocation
+        console.error('Geolocation tidak didukung pada perangkat ini.');
+    }
+}
+
+function toRad(value) {
+    return (value * Math.PI) / 180;
 }
 
 // Fungsi untuk akses pulang
 function aksesPulang() {
-    // Mendapatkan elemen video
-    var video = document.getElementById('videoElement');
+    navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then(function (stream) {
+            // Mendapatkan elemen video
+            var video = document.getElementById('videoElement');
 
-    // Mengubah sumber video ke URL feed kamera akses masuk
-    video.src = Pulang + '?mode=pulang';
-    // video.src = url;
+            // Mengubah sumber video ke URL feed kamera akses masuk
+            video.src = Pulang + '?mode=pulang';
+            // video.src = url;
+        })
+        .catch(function (error) {
+            console.error('Tidak dapat mengakses kamera: ', error);
+        });
 }

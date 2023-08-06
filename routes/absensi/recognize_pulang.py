@@ -6,12 +6,6 @@ import pickle
 import mysql.connector
 import time
 from datetime import date
-import tkinter as tk
-from tkinter import messagebox
-
-cnt = 0
-pause_cnt = 0
-justscanned = False
 
 db = mysql.connector.connect(
         host='localhost',
@@ -20,6 +14,10 @@ db = mysql.connector.connect(
         database='myabsensi'
     )
 cursor = db.cursor()
+
+cnt = 0
+pause_cnt = 0
+justscanned = False
 
 def recognize_pulang():  # generate frame by frame from camera
     def draw_boundary(img, classifier, scaleFactor, minNeighbors, color, text, clf):
@@ -56,15 +54,24 @@ def recognize_pulang():  # generate frame by frame from camera
                                 "LEFT JOIN karyawan b ON a.id_karyawan = b.id_karyawan "
                                 "WHERE a.id_dataset = " + str(id))
                 row = cursor.fetchone()
-                print(row)
-                idkry = row[0]
-                nama = row[1]
-                jabatan = row[2]
+                if row is None:
+                    print(row)
+                    print("No data found for this id")
+                else:
+                    print(row)
+                    idkry = row[0]
+                    nama = row[1]
+                    jabatan = row[2]
  
                 if int(cnt) == 30:
                     cnt = 0
- 
-                    cursor.execute("SELECT * FROM absen_pulang WHERE karyawan_id = %s AND waktu = %s", (idkry, str(date.today())))
+
+                    try:
+                        cursor.execute("SELECT * FROM absen_pulang WHERE karyawan_id = %s AND waktu = %s", (idkry, str(date.today())))
+                    except NameError:
+                        print("idkry is not defined")
+
+                    # cursor.execute("SELECT * FROM absen_pulang WHERE karyawan_id = %s AND waktu = %s", (idkry, str(date.today())))
                     existing_attendance = cursor.fetchone()
 
                     if existing_attendance is None:
@@ -78,13 +85,11 @@ def recognize_pulang():  # generate frame by frame from camera
                         pause_cnt = 0
                         
                     else:
-                        cv2.putText(img, 'ALREADY MARKED', (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
+                        cv2.putText(img, 'Anda telah absen', (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
  
             else:
                 if not justscanned:
                     cv2.putText(img, 'UNKNOWN', (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
-                else:
-                    cv2.putText(img, ' ', (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2,cv2.LINE_AA)
  
                 if pause_cnt > 80:
                     justscanned = False
@@ -93,8 +98,8 @@ def recognize_pulang():  # generate frame by frame from camera
         return coords
  
     def recognize(img, clf, faceCascade):
-        # global face_detected
-        # face_detected = True
+        global face_detected
+        face_detected = True
 
         coords = draw_boundary(img, faceCascade, 1.1, 10, (255, 255, 0), "Face", clf)
         return img

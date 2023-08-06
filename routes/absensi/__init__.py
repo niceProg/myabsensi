@@ -3,7 +3,6 @@ from flask import current_app as app
 from flask import request, flash, redirect, url_for, jsonify
 import mysql.connector
 from flask_cors import CORS
-import os
 import cv2
 from PIL import Image
 import numpy as np
@@ -12,132 +11,93 @@ from functools import wraps
 from routes.absensi.recognize_masuk import recognize_masuk
 from routes.absensi.recognize_pulang import recognize_pulang
 
-Absensi = Blueprint (
-    name='Absensi',
+Absensi = Blueprint(
+    name="Absensi",
     import_name=__name__,
-    url_prefix='/absensi',
-    template_folder='../../templates/'
+    url_prefix="/absensi",
+    template_folder="../../templates/",
 )
 
 db = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        passwd="root",
-        database="myabsensi"
-    )
+    host="localhost",
+    user="root",
+    password="root",
+    database="myabsensi"
+)
 cursor = db.cursor()
 
-# def gen(camera):
-#     while True:
-#         frame=camera.gen_frames()
-#         yield (b'--frame\r\n'
-#                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-
-@Absensi.route('/masuk')
-def recog_masuk():
-    return Response(recognize_masuk(),
-    mimetype='multipart/x-mixed-replace; boundary=frame'
-)
-@Absensi.route('/pulang')
-def recog_pulang():
-    return Response(recognize_pulang(),
-    mimetype='multipart/x-mixed-replace; boundary=frame'
-)
-
-@Absensi.route('/')
+@Absensi.route("/")
 def absensi():
-    cursor.execute("select a.accs_id, a.accs_prsn, b.prs_name, b.prs_skill, a.accs_added "
-                     "  from accs_hist a "
-                     "  left join prs_mstr b on a.accs_prsn = b.prs_nbr "
-                     " where a.accs_date = curdate() "
-                     " order by 1 desc")
-    data = cursor.fetchall()
-
-    
-
     return render_template(
         title="Absensi | My Absensi",
-        template_name_or_list="absen.html",
-        data=data
+        template_name_or_list="absen.html"
     )
 
-# @Absensi.route('/check_attendance', methods=['GET'])
-# def check_attendance():
-#     attendance_detected = app.config['attendance_detected']
+@Absensi.route("/masuk")
+def recog_masuk():
+    return Response(
+        recognize_masuk(), 
+        mimetype="multipart/x-mixed-replace; boundary=frame"
+    )
 
-#     if attendance_detected:
-#         return jsonify({'attendance_detected': True})
+@Absensi.route("/pulang")
+def recog_pulang():
+    return Response(
+        recognize_pulang(), mimetype="multipart/x-mixed-replace; boundary=frame"
+    )
 
-#     return jsonify({'attendance_detected': False})
-    # if justscanned:
-    #     performAction()
+# from flask import request
 
-    # return jsonify({"attendance_detected": attendance_detected})
+# @Absensi.route('/gps', methods=['POST'])
+# def absen():
+#     data = request.get_json()
+#     user_lat = data['lat']
+#     user_lon = data['lon']
+#     # ...
+#     recognize_masuk(user_lat, user_lon)
 
-@Absensi.route('/mark_attendance', methods=['POST'])
-def mark_attendance():
-    attendance_detected = app.config['attendance_detected']
-
-    if not attendance_detected:
-        app.config['attendance_detected'] = True
-
-        cursor.execute("SELECT * FROM karyawan")
-        row2 = cursor.fetchone()
-        # print(row2)
-        nama_lgkap = row2[1]
-        jabatan2 = row2[2]
-        nidn_nipy = row2[3]
-        jkl = row2[4]
-
-        data_karyawan = {
-            'nama': nama_lgkap,
-            'jabatan': jabatan2,
-            'nidn_nipy': nidn_nipy,
-            'jkl': jkl
-        }
-
-        return jsonify({
-            'success': True,
-            'data_karyawan': data_karyawan
-        })
-    
-    return jsonify({'success': False,
-                    'message': 'Karyawan sudah absen sebelumnya'})
-
-@Absensi.route('/countTodayScan')
-def countTodayScan():
-    mydb = mysql.connector.connect(
+@Absensi.route("/latestRecordMasuk", methods=["GET"])
+def latestRecordMasuk():
+    db = mysql.connector.connect(
         host="localhost",
         user="root",
-        passwd="root",
+        password="root",
         database="myabsensi"
     )
-    cursor = mydb.cursor()
- 
-    cursor.execute("select count(*) "
-                     "  from accs_hist "
-                     " where accs_date = curdate() ")
-    row = cursor.fetchone()
-    rowcount = row[0]
- 
-    return jsonify({'rowcount': rowcount})
+    cursor = db.cursor()
 
-@Absensi.route('/loadData', methods = ['GET', 'POST'])
-def loadData():
-    mydb = mysql.connector.connect(
+    cursor.execute("""
+        SELECT a.karyawan_id, b.nama_lengkap, b.jabatan, 
+               IF(a.waktu_masuk IS NULL, 'Belum absen', DATE_FORMAT(a.waktu_masuk, '%H:%i')) AS waktu_masuk,
+               IF(c.waktu_pulang IS NULL, 'Belum absen', DATE_FORMAT(c.waktu_pulang, '%H:%i')) AS waktu_pulang
+        FROM absen_masuk a
+        LEFT JOIN karyawan b ON a.karyawan_id = b.id_karyawan
+        LEFT JOIN absen_pulang c ON a.karyawan_id = c.karyawan_id
+        ORDER BY a.waktu_masuk DESC, b.id_karyawan DESC LIMIT 1
+    """)
+    data = cursor.fetchone()
+
+    return jsonify({"latestRecordMasuk": data})
+
+@Absensi.route("/latestRecordPulang", methods=["GET"])
+def latestRecordPulang():
+    db = mysql.connector.connect(
         host="localhost",
         user="root",
-        passwd="root",
+        password="root",
         database="myabsensi"
     )
-    cursor = mydb.cursor()
- 
-    cursor.execute("select a.accs_id, a.accs_prsn, b.prs_name, b.prs_skill, date_format(a.accs_added, '%H:%i:%s') "
-                     "  from accs_hist a "
-                     "  left join prs_mstr b on a.accs_prsn = b.prs_nbr "
-                     " where a.accs_date = curdate() "
-                     " order by 1 desc")
-    data = cursor.fetchall()
- 
-    return jsonify(response = data)
+    cursor = db.cursor()
 
+    cursor.execute("""
+        SELECT a.karyawan_id, b.nama_lengkap, b.jabatan, 
+               IF(c.waktu_masuk IS NULL, 'Belum absen', DATE_FORMAT(c.waktu_masuk, '%H:%i')) AS waktu_masuk,
+               IF(a.waktu_pulang IS NULL, 'Belum absen', DATE_FORMAT(a.waktu_pulang, '%H:%i')) AS waktu_pulang
+        FROM absen_pulang a
+        LEFT JOIN karyawan b ON a.karyawan_id = b.id_karyawan
+        LEFT JOIN absen_masuk c ON a.karyawan_id = c.karyawan_id
+        ORDER BY a.waktu_pulang DESC LIMIT 1
+    """)
+    data = cursor.fetchone()
+
+    return jsonify({"latestRecordPulang": data})

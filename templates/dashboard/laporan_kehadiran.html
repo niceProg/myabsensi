@@ -1,0 +1,89 @@
+{% extends 'layout/templates_dashboard.html' %} {% block style %}
+<link
+    href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css"
+    rel="stylesheet"
+    type="text/css"
+/>
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='dashboard/css/csv.css') }}"
+/>
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='dashboard/css/print.css') }}"
+/>
+{% endblock style %} {% block content %} {% include 'components/nav_dashboard.html' %}
+<div id="layoutSidenav">
+    <div id="layoutSidenav_nav">{% include 'components/sidenav_dashboard.html' %}</div>
+    <div id="layoutSidenav_content">
+        <div class="container-fluid px-4">
+            <h1 class="mt-4">Laporan Kehadiran</h1>
+            <ol class="breadcrumb mb-4">
+                <li class="breadcrumb-item active">Bulan / Tahun</li>
+            </ol>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-table me-1"></i>
+                    Laporan Kehadiran
+                </div>
+                <div class="card-body">
+                    <table
+                        id="datatablesSimple"
+                        class="table"
+                    >
+                        <thead>
+                            <tr>
+                                <th>ID Karyawan</th>
+                                <th>Nama Karyawan</th>
+                                <th>Jabatan</th>
+                                <th>NIDN / NIPY</th>
+                                <th>Jenis Kelamin</th>
+
+                                <th>Persentase Kehadiran</th>
+                                <th>Persentase Kehadiran Ganjil</th>
+                                <th>Persentase Kehadiran Genap</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in laporankehadiran %}
+                            <tr>
+                                <td>{{item[0]}}</td>
+                                <td>{{item[1]}}</td>
+                                <td>{{item[2]}}</td>
+                                <td>{{item[3]}}</td>
+                                <td>{{item[4]}}</td>
+
+                                <td>{{ '%.2f' % persentase_kehadiran}}%</td>
+                                <td>{{ '%.2f' % persentase_kehadiran_semester1}}%</td>
+                                <td>{{ '%.2f' % persentase_kehadiran_semester2}}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <button
+                        id="Print"
+                        class="cool-button primary-button"
+                    >
+                        Print
+                    </button>
+                    <button
+                        id="CSV"
+                        class="cool-button primary-button"
+                    >
+                        Export to CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %} {% block script %}
+<script
+    src="https://cdn.jsdelivr.net/npm/simple-datatables@latest"
+    type="text/javascript"
+></script>
+<script src="{{ url_for('static', filename='dashboard/js/datatables-simple-demo.js') }}"></script>
+<script src="{{ url_for('static', filename='dashboard/js/csv.js') }}"></script>
+{% endblock script %}

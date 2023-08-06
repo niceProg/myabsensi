@@ -1,0 +1,76 @@
+{% extends 'layout/templates_dashboard.html' %} {% block style %}
+<!-- Load DataTables CSS -->
+<link
+    rel="stylesheet"
+    type="text/css"
+    href="https://cdn.datatables.net/v/dt/dt-1.10.25/datatables.min.css"
+/>
+{% endblock style %} {% block content %} {% include 'components/nav_dashboard.html' %}
+<div id="layoutSidenav">
+    <div id="layoutSidenav_nav">{% include 'components/sidenav_dashboard.html' %}</div>
+    <div id="layoutSidenav_content">
+        <div class="container-fluid px-4">
+            <h1 class="mt-4">Kehadiran</h1>
+            <ol class="breadcrumb mb-4">
+                <li class="breadcrumb-item active">Daftar Kehadiran</li>
+            </ol>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-table me-1"></i>
+                    Daftar Kehadiran
+                </div>
+                <div class="card-body">
+                    <!-- Filter Options -->
+                    <select id="filterHari">
+                        <option value="">Pilih Hari</option>
+                        {% for h in hari %}
+                        <option value="{{ h }}">{{ h }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <select id="filterBulan">
+                        <option value="">Pilih Bulan</option>
+                        {% for b in bulan %}
+                        <option value="{{ b }}">{{ b }}</option>
+                        {% endfor %}
+                    </select>
+                    <table id="datatablesSimple">
+                        <thead>
+                            <tr>
+                                <th>ID Karyawan</th>
+                                <th>Nama Karyawan</th>
+                                <th>Tanggal</th>
+                                <th>Absen Masuk</th>
+                                <th>Absen Pulang</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in absen %}
+                            <tr>
+                                <td>{{item[0]}}</td>
+                                <td>{{item[4]}}</td>
+                                <td>{{item[1]}}</td>
+                                <td>{{item[2]}}</td>
+                                <td>{{item[3]}}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %} {% block script %}
+<!-- Load jQuery -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<!-- Load DataTables JavaScript -->
+<script
+    type="text/javascript"
+    src="https://cdn.datatables.net/v/dt/dt-1.10.25/datatables.min.js"
+></script>
+
+<script src="{{ url_for('static', filename='dashboard/js/filter.js') }}"></script>
+<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> -->
+{% endblock script %}

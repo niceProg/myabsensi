@@ -1,7 +1,69 @@
-{% extends 'layout/templates_dashboard.html' %} {% block content %} {% include 'components/nav_dashboard.html' %}
+{% extends 'layout/templates_dashboard.html' %} {% block style %}
+<!-- <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='dashboard/css/calendar.css') }}"
+/> -->
+<link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css"
+/>
+
+{% endblock style %} {% block content %} {% include 'components/nav_dashboard.html' %}
 <div id="layoutSidenav">
     <div id="layoutSidenav_nav">{% include 'components/sidenav_dashboard.html' %}</div>
     <div id="layoutSidenav_content">{% include 'dashboard/main_content.html' %} {% include 'dashboard/footer_content.html' %}</div>
 </div>
 
-{% endblock content %}
+{% endblock content %} {% block script %}
+<script
+    src="https://cdn.jsdelivr.net/npm/simple-datatables@latest"
+    type="text/javascript"
+></script>
+<script src="{{ url_for('static', filename='dashboard/js/datatables-simple-demo.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    var data_kehadiran = JSON.parse('{{ data_json|safe }}');
+
+    // Menginisialisasi kalender
+    $('#calendar').fullCalendar({
+        defaultView: 'month',
+        events: data_kehadiran.labels.map(function (label, index) {
+            return {
+                title: 'Kehadiran: ' + data_kehadiran.datasets[0].data[index],
+                start: label,
+            };
+        }),
+        eventClick: function (calEvent, jsEvent, view) {
+            // Mengambil data kehadiran berdasarkan tanggal yang diklik
+            var tanggal = moment(calEvent.start).format('YYYY-MM-DD');
+            var index = data_kehadiran.labels.indexOf(tanggal);
+
+            // Mengupdate chart dengan data kehadiran yang dipilih
+            updateChart(data_kehadiran.datasets[0].data[index]);
+        },
+    });
+
+    var ctx = document.getElementById('myChart').getContext('2d');
+    var myChart = new Chart(ctx, {
+        type: 'bar',
+        data: data_kehadiran,
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                },
+            },
+        },
+    });
+
+    // Fungsi untuk mengupdate chart dengan data kehadiran yang dipilih
+    function updateChart(jumlah_kehadiran) {
+        myChart.data_kehadiran.datasets[0].data_kehadiran = [jumlah_kehadiran];
+        myChart.update();
+    }
+</script>
+{% endblock script %}

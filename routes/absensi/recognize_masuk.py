@@ -6,12 +6,9 @@ import pickle
 import mysql.connector
 import time
 from datetime import date
-import tkinter as tk
-from tkinter import messagebox
-
-cnt = 0
-pause_cnt = 0
-justscanned = False
+# from geopy.distance import geodesic
+# from geopy.geocoders import Nominatim
+# from math import radians, cos, sin, asin,sqrt
 
 db = mysql.connector.connect(
         host='localhost',
@@ -21,7 +18,38 @@ db = mysql.connector.connect(
     )
 cursor = db.cursor()
 
+cnt = 0
+pause_cnt = 0
+justscanned = False
+# geolocator = Nominatim(user_agent="geoapiExercises")
+# OFFICE_LAT, OFFICE_LON = -7.0021788, 109.1387994  # replace this with your office coordinates
+# RADIUS = 0.2  # radius in kilometer
+
+# def haversine(lon1, lat1, lon2, lat2):
+#     """
+#     Calculate the great circle distance in kilometers between two points 
+#     on the earth (specified in decimal degrees)
+#     """
+#     # convert decimal degrees to radians 
+#     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+#     # haversine formula 
+#     dlon = lon2 - lon1 
+#     dlat = lat2 - lat1 
+#     a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+#     c = 2 * asin(sqrt(a)) 
+#     r = 6371 # Radius of earth in kilometers. Use 3956 for miles
+#     return c * r
+
+# def get_location_by_coordinates(lat, lon):
+#     location = geolocator.reverse([lat, lon], exactly_one=True)
+#     address = location.raw['address']
+#     return address
+
 def recognize_masuk():  # generate frame by frame from camera
+    # lat = -7.0021788 # replace this with your office latitude
+    # lon = 109.1387994 # replace this with your office longitude
+    
     def draw_boundary(img, classifier, scaleFactor, minNeighbors, color, text, clf):
         gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         features = classifier.detectMultiScale(gray_image, scaleFactor, minNeighbors)
@@ -54,47 +82,53 @@ def recognize_masuk():  # generate frame by frame from camera
                 cursor.execute("SELECT a.id_karyawan, b.nama_lengkap, b.jabatan "
                                 "FROM dataset a "
                                 "LEFT JOIN karyawan b ON a.id_karyawan = b.id_karyawan "
-                                "WHERE a.id_dataset = " + str(id))
+                                "WHERE a.id_dataset = %s", (id,))
                 row = cursor.fetchone()
-                print(row)
-                idkry = row[0]
-                nama = row[1]
-                jabatan = row[2]
-
-                # cursor.execute("SELECT * FROM karyawan")
-                # row2 = cursor.fetchone()
-                # print(row2)
-                # nama_lgkap = row2[1]
-                # jabatan2 = row2[2]
-                # nidn_nipy = row2[3]
-                # jkl = row2[4]
+                if row is None:
+                    print(row)
+                    print("No data found for this id")
+                else:
+                    print(row)
+                    idkry = row[0]
+                    nama = row[1]
+                    jabatan = row[2]
  
                 if int(cnt) == 30:
                     cnt = 0
- 
-                    cursor.execute("SELECT * FROM absen_masuk WHERE karyawan_id = %s AND waktu = %s", (idkry, str(date.today())))
+
+                    # user_location = (user_lat, user_lon)
+                    # office_location = (OFFICE_LAT, OFFICE_LON)
+                    # distance = geodesic(user_location, office_location).kilometers
+                    # office_location = get_location_by_coordinates(lat, lon)
+                    # current_location = get_location_by_coordinates(user_lat, user_lon)
+
+                    # distance = haversine(lon, lat, user_lon, user_lat)
+                    # if distance > RADIUS:
+                    #     cv2.putText(img, 'Anda tidak berada di kantor', (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
+                    # else:
+                    try:
+                        cursor.execute("SELECT * FROM absen_masuk WHERE karyawan_id = %s AND waktu = %s", (idkry, str(date.today())))
+                    except NameError:
+                        print("idkry is not defined")
+                    
                     existing_attendance = cursor.fetchone()
 
                     if existing_attendance is None:
                         cursor.execute("insert into absen_masuk (waktu, karyawan_id) values('"+str(date.today())+"', '" + str(idkry) + "')")
                         db.commit()
- 
+    
                         cv2.putText(img, nama + ' | ' + jabatan, (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (153, 255, 255), 2, cv2.LINE_AA)
                         time.sleep(1)
-    
+        
                         justscanned = True
                         pause_cnt = 0
-
-                        # return jsonify(nama_lgkap=nama_lgkap, jabatan2=jabatan2, nidn_nipy=nidn_nipy, jkl=jkl)
-                        
+                            
                     else:
-                        cv2.putText(img, 'ALREADY MARKED', (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
- 
+                        cv2.putText(img, 'Anda telah absen', (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
+                        
             else:
                 if not justscanned:
                     cv2.putText(img, 'UNKNOWN', (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
-                # else:
-                #     cv2.putText(img, ' ', (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2,cv2.LINE_AA)
  
                 if pause_cnt > 80:
                     justscanned = False

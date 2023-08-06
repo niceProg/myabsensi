@@ -1,9 +1,7 @@
-window.addEventListener('DOMContentLoaded', (event) => {
-    // Simple-DataTables
-    // https://github.com/fiduswriter/Simple-DataTables/wiki
+document.addEventListener('DOMContentLoaded', function () {
+    const dataTabel = document.getElementById('datatablesSimple');
+    const exportButton = document.getElementById('Print');
 
-    const datatablesSimple = document.getElementById('datatablesSimple');
-    if (datatablesSimple) {
-        new simpleDatatables.DataTable(datatablesSimple);
-    }
+    // Inisialisasi Simple-DataTables
+    const table = new simpleDatatables.DataTable(dataTabel);
 });
