@@ -30,8 +30,8 @@ function aksesMasuk() {
                 console.log('Latitude:', userLat);
                 console.log('Longitude:', userLon);
 
-                var officeLat = -7.0052185; // Latitude kantor
-                var officeLon = 109.1423485; // Longitude kantor
+                var officeLat = -6.8686899; // Latitude kantor -7.0052185   -7.0051453 110.4381254
+                var officeLon = 109.1069658; // Longitude kantor 110.4381254
 
                 var R = 6371; // Radius bumi dalam kilometer
                 var dLat = toRad(officeLat - userLat);

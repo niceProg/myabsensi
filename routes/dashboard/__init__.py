@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session, redirect, url_for, make_response, request, flash, Response, jsonify, json
 from flask import current_app as app
-from routes.auth import login_required
+import hashlib
+from routes.auth import login_required, admin_required
 from datetime import date, datetime, timedelta
 import calendar
 import datetime
@@ -8,7 +9,6 @@ from dateutil import parser
 from googleapiclient.discovery import build
 import mysql.connector
 from datetime import datetime
-from flask_cors import CORS
 import os
 import cv2
 from PIL import Image
@@ -24,54 +24,66 @@ Dashboard = Blueprint (
     template_folder='../../templates/dashboard'
 )
 
-db = mysql.connector.connect(
-        host='localhost',
-        user='root',
-        password='root',
-        database='myabsensi'
-)
-cursor=db.cursor()
+def get_db_connection():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="root",
+        database="myabsensi"
+    )
 
 def create_calendar(year, month):
     cal = calendar.monthcalendar(year,month)
     return cal
 
 @Dashboard.route('/', endpoint='index')
+@admin_required
 @login_required
 def index():
+    mydb = get_db_connection()
+    mycursor = mydb.cursor()
+
     # ADMIN
-    cursor.execute("SELECT * FROM admin")
-    admin = cursor.fetchone()
+    mycursor.execute("SELECT * FROM admin")
+    admin = mycursor.fetchone()
     uname=admin[1]
 
     # Total Karyawan
-    cursor.execute("SELECT id_karyawan, nama_lengkap, jabatan, nidn_nipy, jenis_kelamin from karyawan")
-    data = cursor.fetchall()
+    mycursor.execute("SELECT id_karyawan, nama_lengkap, jabatan, nidn_nipy, jenis_kelamin from karyawan")
+    data = mycursor.fetchall()
     total_data = len(data)
 
     # Menghitung siapa saja hari ini yang telah absen dan pulang
-    cursor.execute("""
-        SELECT DISTINCT absen_masuk.karyawan_id, absen_masuk.waktu,
-                   COALESCE(DATE_FORMAT(absen_masuk.waktu_masuk, '%H:%i'), 'Tidak Hadir') AS waktu_masuk,
-                   COALESCE(DATE_FORMAT(absen_pulang.waktu_pulang, '%H:%i'), 'Belum Pulang') AS waktu_pulang,
-                   karyawan.nama_lengkap
-        FROM absen_masuk
-        JOIN absen_pulang ON absen_masuk.karyawan_id = absen_pulang.karyawan_id
-        JOIN karyawan ON absen_masuk.karyawan_id = id_karyawan
-        WHERE DATE(absen_masuk.waktu) = %s
-    """, (date.today(),))
-    absen = cursor.fetchall()
+    mycursor.execute("""
+        SELECT 
+            a.karyawan_id, 
+            b.nama_lengkap, 
+            DATE_FORMAT(a.waktu_masuk, '%Y-%m-%d') AS tanggal,  -- Mengganti kolom jabatan dengan tanggal
+            DATE_FORMAT(a.waktu_masuk, '%H:%i') AS waktu_masuk,
+            IF(c.waktu_pulang IS NULL, 'Belum absen', DATE_FORMAT(c.waktu_pulang, '%H:%i')) AS waktu_pulang
+        FROM 
+            absen_masuk a
+        JOIN 
+            karyawan b ON a.karyawan_id = b.id_karyawan
+        LEFT JOIN 
+            absen_pulang c ON a.karyawan_id = c.karyawan_id
+        WHERE 
+            DATE(a.waktu_masuk) = CURDATE()
+        ORDER BY 
+            a.waktu_masuk
+    """)
+    absen = mycursor.fetchall()
     print(absen)
 
     # Laporan kehadiran berupa chart bar
-    cursor.execute("""
+    mycursor.execute("""
         SELECT YEAR(waktu_masuk) AS tahun, MONTHNAME(waktu_masuk) AS bulan, COUNT(*) AS jumlah_kehadiran
         FROM absen_masuk
         WHERE DATE(waktu_masuk) = %s
         GROUP BY YEAR(waktu_masuk), MONTH(waktu_masuk)
         ORDER BY YEAR(waktu_masuk), MONTH(waktu_masuk)
     """, (date.today(),))
-    laporan_kehadiran = cursor.fetchall()
+    laporan_kehadiran = mycursor.fetchall()
 
     # Ekstraksi data untuk plotting
     bulan = [data[1] for data in laporan_kehadiran]
@@ -89,12 +101,12 @@ def index():
         }]
     })
     
-    cursor.execute("""
+    mycursor.execute("""
         SELECT COUNT(*) AS total_kehadiran
         FROM absen_masuk
         WHERE DATE(waktu_masuk) = %s
     """, (date.today(),))
-    total_kehadiran = cursor.fetchone()[0]
+    total_kehadiran = mycursor.fetchone()[0]
 
     # Mendapatkan bulan dan tahun yang dipilih dari permintaan GET
     selected_month = int(request.args.get('month', 1))
@@ -109,6 +121,10 @@ def index():
 
     # Menentukan hari yang dipilih (misalnya hari ini)
     selected_day = 12  # Ganti dengan logika pemilihan hari yang sesuai
+
+    # Menutup koneksi
+    mycursor.close()
+    mydb.close()
 
     if 'user_id' in session:
         user_id = session['user_id']
@@ -129,19 +145,26 @@ def index():
             data_json=data_json
         )
         # return redirect(url_for('Dashboard.index', user_id=user_id))
-    else:
-        return redirect(url_for('Auth.login'))
+    # else:
+    #     return redirect(url_for('Auth.dashboard'))
 
 @Dashboard.route('/daftarkaryawan')
+@admin_required
 @login_required
 def daftarkaryawan():
+    mydb = get_db_connection()
+    mycursor = mydb.cursor()
     
-    cursor.execute("SELECT * FROM admin")
-    admin = cursor.fetchone()
+    mycursor.execute("SELECT * FROM admin")
+    admin = mycursor.fetchone()
     uname=admin[1]
 
-    cursor.execute("SELECT id_karyawan, nama_lengkap, jabatan, nidn_nipy, jenis_kelamin from karyawan")
-    data = cursor.fetchall()
+    mycursor.execute("SELECT id_karyawan, nama_lengkap, jabatan, nidn_nipy, jenis_kelamin from karyawan")
+    data = mycursor.fetchall()
+
+    # Menutup koneksi
+    mycursor.close()
+    mydb.close()
 
     return render_template (
         title="Daftar Karyawan | Dashboard",
@@ -151,20 +174,30 @@ def daftarkaryawan():
     )
 
 @Dashboard.route('/daftarkehadiran')
+@admin_required
 @login_required
 def daftarkehadiran():
-    cursor.execute("SELECT * FROM admin")
-    admin = cursor.fetchone()
+    mydb = get_db_connection()
+    mycursor = mydb.cursor()
+
+    mycursor.execute("SELECT * FROM admin")
+    admin = mycursor.fetchone()
     uname=admin[1]
 
     sekarang = date
-    cursor.execute("""
-        SELECT DISTINCT absen_masuk.karyawan_id, absen_masuk.waktu, TIME(absen_masuk.waktu_masuk) AS waktu_masuk, TIME(absen_pulang.waktu_pulang) AS waktu_pulang, karyawan.nama_lengkap
+    mycursor.execute("""
+        SELECT DISTINCT 
+            absen_masuk.karyawan_id, 
+            DATE(absen_masuk.waktu_masuk) AS tanggal,
+            TIME(absen_masuk.waktu_masuk) AS waktu_masuk, 
+            IFNULL(TIME(absen_pulang.waktu_pulang), 'Belum absen') AS waktu_pulang, 
+            karyawan.nama_lengkap
         FROM absen_masuk
-        JOIN absen_pulang ON absen_masuk.karyawan_id = absen_pulang.karyawan_id
+        LEFT JOIN absen_pulang ON absen_masuk.karyawan_id = absen_pulang.karyawan_id
         JOIN karyawan ON absen_masuk.karyawan_id = id_karyawan
+        ORDER BY tanggal DESC, waktu_masuk DESC
     """)
-    absen = cursor.fetchall()
+    absen = mycursor.fetchall()
     data = [row for row in absen]
     
     print(data)
@@ -181,6 +214,10 @@ def daftarkehadiran():
     hari = sorted(list(hari))
     bulan = sorted(list(bulan))
 
+    # Menutup koneksi
+    mycursor.close()
+    mydb.close()
+
     return render_template (
         title="Daftar Kehadiran | Dashboard",
         template_name_or_list='daftar_kehadiran.html',
@@ -192,9 +229,13 @@ def daftarkehadiran():
     return jsonify(data)
 
 @Dashboard.route('/laporankehadiran')
+@admin_required
 @login_required
 def laporankehadiran():
-    cursor.execute("""
+    mydb = get_db_connection()
+    mycursor = mydb.cursor()
+
+    mycursor.execute("""
         SELECT k.id_karyawan, k.nama_lengkap, k.jabatan, k.nidn_nipy, k.jenis_kelamin,
             COALESCE(am.waktu, 'Tidak Ada Absen'),
             SUM(CASE WHEN MONTH(am.waktu_masuk) = 1 THEN 1 ELSE 0 END) AS januari,
@@ -213,111 +254,59 @@ def laporankehadiran():
         LEFT JOIN absen_masuk am ON k.id_karyawan = am.karyawan_id
         GROUP BY k.id_karyawan
     """)
-    laporankehadiran = cursor.fetchall()
+    laporankehadiran = mycursor.fetchall()
     print(laporankehadiran)
 
-    total_kehadiran = 0
-    for row in laporankehadiran:
-        for i in range(6, 18):
-            total_kehadiran += row[i]
     jumlah_hari_kerja = 20
-    persentase_kehadiran = (total_kehadiran / (jumlah_hari_kerja * len(laporankehadiran))) * 100
+    jumlah_hari_kerja_semester_ganjil = 20 * 6  # Januari-Juni
+    jumlah_hari_kerja_semester_genap = 20 * 6  # Juli-Desember
 
-    print("Total Kehadiran Seluruh Karyawan: ", total_kehadiran)
-    print("Jumlah Hari Kerja: ", jumlah_hari_kerja)
-    print("Persentase Kehadiran: ", persentase_kehadiran, "%")
-    
-    # Menghitung total kehadiran untuk setiap semester
-    total_kehadiran_semester1 = 0
-    total_kehadiran_semester2 = 0
+    data_laporan = []
     for row in laporankehadiran:
-        for i in range(6, 10):  # Semester 1, kolom Januari-April
-            total_kehadiran_semester1 += row[i]
-        for i in range(10, 14):  # Semester 2, kolom Mei-Agustus
-            total_kehadiran_semester2 += row[i]
-    # Menghitung persentase kehadiran untuk setiap semester
-    jumlah_hari_kerja_semester1 = 80  # Jumlah hari kerja dalam semester 1
-    jumlah_hari_kerja_semester2 = 80  # Jumlah hari kerja dalam semester 2
-    persentase_kehadiran_semester1 = (total_kehadiran_semester1 / (jumlah_hari_kerja_semester1 * len(laporankehadiran))) * 100
-    persentase_kehadiran_semester2 = (total_kehadiran_semester2 / (jumlah_hari_kerja_semester2 * len(laporankehadiran))) * 100
-    # print(laporankehadiran)
+        total_kehadiran_karyawan = sum(row[6:18])
+        persentase_kehadiran_karyawan = (total_kehadiran_karyawan / (jumlah_hari_kerja * 12)) * 100
 
-    # api_key = "AIzaSyCPZq8IXMMCilPLNuZxiiCdAUASUtvdqEk"
-    # # Inisialisasi objek Google Calendar API
-    # service = build("calendar", "v3", developerKey=api_key)
-    # # Daftar tanggal libur atau tanggal merah
-    # tanggal_libur = []
-    # # Mendapatkan acara-acara dari kalender publik dengan kata kunci "holiday"
-    # events = service.events().list(calendarId="id.indonesian#holiday@group.v.calendar.google.com").execute()
-    # for event in events['items']:
-    #     start_date = datetime.strptime(event['start']['date'], "%Y-%m-%d").date()
-    #     tanggal_libur.append(start_date)
+        total_kehadiran_semester_ganjil = sum(row[6:12])
+        total_kehadiran_semester_genap = sum(row[12:18])
 
-    # # Menghitung jumlah hari kerja dalam rentang waktu tertentu
-    # start_date = datetime(2023, 7, 1).date()  # Tanggal awal
-    # end_date = datetime(2023, 7, 31).date()  # Tanggal akhir
+        persentase_kehadiran_semester_ganjil = (total_kehadiran_semester_ganjil / jumlah_hari_kerja_semester_ganjil) * 100
+        persentase_kehadiran_semester_genap = (total_kehadiran_semester_genap / jumlah_hari_kerja_semester_genap) * 100
 
-    # jumlah_absensi = 0
-    # # Mengambil data kehadiran
-    # for data in laporankehadiran:
-    #     absensi = data[5]  # Kolom absensi dalam query Anda
-    #     print(data)
-    #     if absensi != 'Tidak Ada Absen':
-    #         jumlah_absensi += 1
+        karyawan_data = {
+            'id': row[0],
+            'nama': row[1],
+            'jabatan': row[2],
+            'nidn_nipy': row[3],
+            'jenis_kelamin': row[4],
+            'persentase_kehadiran': persentase_kehadiran_karyawan,
+            'persentase_kehadiran_ganjil': persentase_kehadiran_semester_ganjil,
+            'persentase_kehadiran_genap': persentase_kehadiran_semester_genap
+        }
 
-    # current_date = start_date
-    # jumlah_hari_kerja = 0
+        data_laporan.append(karyawan_data)
 
-    # while current_date <= end_date:
-    #     # Periksa apakah tanggal bukan hari libur dan merupakan hari kerja (Senin-Jumat)
-    #     if current_date.weekday() < 5 and current_date not in tanggal_libur:
-    #         jumlah_hari_kerja += 1
 
-    #     current_date += timedelta(days=1)
-
-    # print("Jumlah Hari Kerja: ", jumlah_hari_kerja)
-    
-    # persentase_kehadiran_total = (jumlah_absensi / jumlah_hari_kerja) * 100
-    # print("Persentase Kehadiran: {:.0f}%".format(persentase_kehadiran_total))
-
-    # # Membuat dictionary untuk menyimpan jumlah absensi setiap karyawan
-    # jumlah_absensi_per_karyawan = {}
-    # # Mengambil data kehadiran
-    # for data in laporankehadiran:
-    #     karyawan_id = data[0]  # Kolom ID Karyawan dalam query Anda
-    #     absensi = data[5]  # Kolom absensi dalam query Anda
-    #     if karyawan_id not in jumlah_absensi_per_karyawan:
-    #         jumlah_absensi_per_karyawan[karyawan_id] = 0
-    #     if absensi != 'Tidak Ada Absen':
-    #         jumlah_absensi_per_karyawan[karyawan_id] += 1
-    # # Menghitung persentase kehadiran untuk setiap karyawan
-    # persentase_kehadiran_per_karyawan = {}
-    # for karyawan_id, jumlah_absensi in jumlah_absensi_per_karyawan.items():
-    #     persentase_kehadiran_per_karyawan[karyawan_id] = (jumlah_absensi / jumlah_hari_kerja) * 100
-    # # Menampilkan persentase kehadiran untuk setiap karyawan
-    # for karyawan_id, persentase_kehadiran in persentase_kehadiran_per_karyawan.items():
-    #     print("Karyawan ID: ", karyawan_id)
-    #     print("Persentase Kehadiran: {:.2f}%".format(persentase_kehadiran))
-    #     print()
-
-    cursor.execute("SELECT * FROM admin")
-    admin = cursor.fetchone()
+    mycursor.execute("SELECT * FROM admin")
+    admin = mycursor.fetchone()
     uname=admin[1]
+
+    # Menutup koneksi
+    mycursor.close()
+    mydb.close()
     
     return render_template (
         title="Laporan Kehadiran | Dashboard",
         template_name_or_list='laporan_kehadiran.html',
-        laporankehadiran=laporankehadiran,
-        admin=uname,
-        total_kehadiran=total_kehadiran,
-        persentase_kehadiran=persentase_kehadiran,
-        persentase_kehadiran_semester1=persentase_kehadiran_semester1,
-        persentase_kehadiran_semester2=persentase_kehadiran_semester2
-        # persentase_kehadiran=persentase_kehadiran_total,
-        # persentase_karyawan=persentase_kehadiran_per_karyawan
+        laporankehadiran=data_laporan,
+        admin=uname
+        # total_kehadiran=total_kehadiran,
+        # persentase_kehadiran=laporankehadiran
+        # persentase_kehadiran_semester1=persentase_kehadiran_semester1,
+        # persentase_kehadiran_semester2=persentase_kehadiran_semester2
     )
 
 @Dashboard.route('/train_classifier/<id>')
+@admin_required
 @login_required
 def train_classifier(id):
     dataset_dir = "dataset"
@@ -329,10 +318,18 @@ def train_classifier(id):
     for image in path:
         img = Image.open(image).convert('L');
         imageNp = np.array(img, 'uint8')
-        id = int(os.path.split(image)[1].split(".")[1])
+        # id = int(os.path.split(image)[1].split(".")[1])
+        filename_part = os.path.split(image)[1].split(".")[1]
+        if filename_part.isdigit():
+            id = int(filename_part)
+            faces.append(imageNp)
+            ids.append(id)
+            print(f"Training with ID: {id}")
+        else:
+            print(f"Unexpected filename part: {filename_part}")
  
-        faces.append(imageNp)
-        ids.append(id)
+        # faces.append(imageNp)
+        # ids.append(id)
     ids = np.array(ids)
  
     # Train the classifier and save
@@ -343,16 +340,24 @@ def train_classifier(id):
     return redirect(url_for('Dashboard.addprsn'))
 
 @Dashboard.route('/addprsn')
+@admin_required
 @login_required
 def addprsn():
-    cursor.execute("SELECT IFNULL(MAX(id_karyawan) + 1, 1) AS next_id FROM karyawan")
-    row = cursor.fetchone()
+    mydb = get_db_connection()
+    mycursor = mydb.cursor()
+
+    mycursor.execute("SELECT IFNULL(MAX(id_karyawan) + 1, 1) AS next_id FROM karyawan")
+    row = mycursor.fetchone()
     id = row[0]
     print(int(id))
 
-    cursor.execute("SELECT * FROM admin")
-    admin = cursor.fetchone()
+    mycursor.execute("SELECT * FROM admin")
+    admin = mycursor.fetchone()
     uname=admin[1]
+
+    # Menutup koneksi
+    mycursor.close()
+    mydb.close()
  
     return render_template(
         title="Karyawan | Dashboard",
@@ -362,27 +367,57 @@ def addprsn():
     )
  
 @Dashboard.route('/addprsn_submit', methods=['POST'])
+@admin_required
 @login_required
 def addprsn_submit():
+    mydb = get_db_connection()
+    mycursor = mydb.cursor()
+
     id_kry = request.form.get('id_kry')
     nidn_nipy = request.form.get('nidn_nipy')
     nama_lgkp = request.form.get('nama_lgkp')
     jabatan = request.form.get('jabatan')
     jn_klm = request.form.get('jn_klm')
+
+    # Data akun user
+    username = request.form.get('username')
+    password = request.form.get('password')
+    hashed_password = hashlib.sha256(password.encode()).hexdigest()
  
-    cursor.execute("""INSERT INTO `karyawan` (`id_karyawan`, `nidn_nipy`, `nama_lengkap`, `jabatan`, `jenis_kelamin`) VALUES
-                    ('{}', '{}', '{}', '{}', '{}')""".format(id_kry, nidn_nipy, nama_lgkp, jabatan, jn_klm))
-    db.commit()
+    # Menyimpan data karyawan
+    mycursor.execute(
+        "INSERT INTO karyawan (id_karyawan, nidn_nipy, nama_lengkap, jabatan, jenis_kelamin) VALUES (%s, %s, %s, %s, %s)",
+        (id_kry, nidn_nipy, nama_lgkp, jabatan, jn_klm)
+    )
+
+    # Menyimpan data akun user
+    mycursor.execute(
+        "INSERT INTO users (id_karyawan, username, password) VALUES (%s, %s, %s)",
+        (id_kry, username, hashed_password)
+    )
+    mydb.commit()
+
+    # Menutup koneksi
+    mycursor.close()
+    mydb.close()
  
     # return redirect(url_for('home'))
     return redirect(url_for('Dashboard.vfdataset_page', id=id_kry))
  
 @Dashboard.route('/vfdataset_page/<id>')
+@admin_required
 @login_required
 def vfdataset_page(id):
-    cursor.execute("SELECT * FROM admin")
-    admin = cursor.fetchone()
+    mydb = get_db_connection()
+    mycursor = mydb.cursor()
+
+    mycursor.execute("SELECT * FROM admin")
+    admin = mycursor.fetchone()
     uname=admin[1]
+
+    # Menutup koneksi
+    mycursor.close()
+    mydb.close()
 
     return render_template(
         title="Training",
@@ -392,6 +427,7 @@ def vfdataset_page(id):
     )
  
 @Dashboard.route('/vidfeed_dataset/<id>')
+@admin_required
 @login_required
 def vidfeed_dataset(id):
     #Video streaming route. Put this in the src attribute of an img tag

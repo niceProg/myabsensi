@@ -1,0 +1,11 @@
+{% extends 'layout/templates_user.html' %} {% block style %} {% endblock style %} {% block content %}
+<div class="layout-wrapper layout-content-navbar">
+    <div class="layout-container">
+        {% include 'components/sidenav_user.html' %}
+        <div class="layout-page">
+            {% include 'components/nav_user.html'%}
+            <div class="content-wrapper">{% include 'user/main_user.html' %}</div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

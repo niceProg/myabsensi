@@ -1,4 +1,19 @@
 <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %}
+    <div class="flash-messages">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+            <span
+                class="close-btn"
+                onclick="closeFlashMessages();"
+                >&times;</span
+            >
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %} {% endwith %}
+
     <!-- Navbar Brand-->
     <a
         class="navbar-brand ps-3"

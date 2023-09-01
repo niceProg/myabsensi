@@ -1,4 +1,5 @@
 from datetime import datetime
+from flask import jsonify
 import face_recognition
 import cv2
 import pickle
@@ -59,6 +60,8 @@ def generate_dataset(nbr):
             yield (b'--frame\r\n'b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
  
             if cv2.waitKey(1) == 13 or int(img_id) == int(max_imgid):
+                # return jsonify({"status": "success", "message": "Data telah terinput!"})
                 break
                 cap.release()
                 cv2.destroyAllWindows()
+                

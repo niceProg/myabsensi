@@ -1,56 +1,33 @@
 from datetime import datetime
 from flask import Response, jsonify
+from flask import current_app as app
+from flask import current_app as socketio
 import face_recognition
 import cv2
 import pickle
 import mysql.connector
 import time
 from datetime import date
-# from geopy.distance import geodesic
-# from geopy.geocoders import Nominatim
-# from math import radians, cos, sin, asin,sqrt
 
-db = mysql.connector.connect(
-        host='localhost',
-        user='root',
-        password='root',
-        database='myabsensi'
+def get_db_connection():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="root",
+        database="myabsensi"
     )
-cursor = db.cursor()
 
 cnt = 0
 pause_cnt = 0
 justscanned = False
-# geolocator = Nominatim(user_agent="geoapiExercises")
-# OFFICE_LAT, OFFICE_LON = -7.0021788, 109.1387994  # replace this with your office coordinates
-# RADIUS = 0.2  # radius in kilometer
+display_message_until = None
 
-# def haversine(lon1, lat1, lon2, lat2):
-#     """
-#     Calculate the great circle distance in kilometers between two points 
-#     on the earth (specified in decimal degrees)
-#     """
-#     # convert decimal degrees to radians 
-#     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-
-#     # haversine formula 
-#     dlon = lon2 - lon1 
-#     dlat = lat2 - lat1 
-#     a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-#     c = 2 * asin(sqrt(a)) 
-#     r = 6371 # Radius of earth in kilometers. Use 3956 for miles
-#     return c * r
-
-# def get_location_by_coordinates(lat, lon):
-#     location = geolocator.reverse([lat, lon], exactly_one=True)
-#     address = location.raw['address']
-#     return address
-
-def recognize_masuk():  # generate frame by frame from camera
-    # lat = -7.0021788 # replace this with your office latitude
-    # lon = 109.1387994 # replace this with your office longitude
+def recognize_masuk():  
     
     def draw_boundary(img, classifier, scaleFactor, minNeighbors, color, text, clf):
+        mydb = get_db_connection()
+        mycursor = mydb.cursor()
+        
         gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         features = classifier.detectMultiScale(gray_image, scaleFactor, minNeighbors)
  
@@ -79,11 +56,11 @@ def recognize_masuk():  # generate frame by frame from camera
                 cv2.rectangle(img, (x, y + h + 40), (x + w, y + h + 50), color, 2)
                 cv2.rectangle(img, (x, y + h + 40), (x + int(w_filled), y + h + 50), (153, 255, 255), cv2.FILLED)
  
-                cursor.execute("SELECT a.id_karyawan, b.nama_lengkap, b.jabatan "
+                mycursor.execute("SELECT a.id_karyawan, b.nama_lengkap, b.jabatan "
                                 "FROM dataset a "
                                 "LEFT JOIN karyawan b ON a.id_karyawan = b.id_karyawan "
                                 "WHERE a.id_dataset = %s", (id,))
-                row = cursor.fetchone()
+                row = mycursor.fetchone()
                 if row is None:
                     print(row)
                     print("No data found for this id")
@@ -96,26 +73,16 @@ def recognize_masuk():  # generate frame by frame from camera
                 if int(cnt) == 30:
                     cnt = 0
 
-                    # user_location = (user_lat, user_lon)
-                    # office_location = (OFFICE_LAT, OFFICE_LON)
-                    # distance = geodesic(user_location, office_location).kilometers
-                    # office_location = get_location_by_coordinates(lat, lon)
-                    # current_location = get_location_by_coordinates(user_lat, user_lon)
-
-                    # distance = haversine(lon, lat, user_lon, user_lat)
-                    # if distance > RADIUS:
-                    #     cv2.putText(img, 'Anda tidak berada di kantor', (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
-                    # else:
                     try:
-                        cursor.execute("SELECT * FROM absen_masuk WHERE karyawan_id = %s AND waktu = %s", (idkry, str(date.today())))
+                        mycursor.execute("SELECT * FROM absen_masuk WHERE karyawan_id = %s AND waktu = %s", (idkry, str(date.today())))
                     except NameError:
                         print("idkry is not defined")
                     
-                    existing_attendance = cursor.fetchone()
+                    existing_attendance = mycursor.fetchone()
 
                     if existing_attendance is None:
-                        cursor.execute("insert into absen_masuk (waktu, karyawan_id) values('"+str(date.today())+"', '" + str(idkry) + "')")
-                        db.commit()
+                        mycursor.execute("insert into absen_masuk (waktu, karyawan_id) values('"+str(date.today())+"', '" + str(idkry) + "')")
+                        mydb.commit()
     
                         cv2.putText(img, nama + ' | ' + jabatan, (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (153, 255, 255), 2, cv2.LINE_AA)
                         time.sleep(1)
@@ -125,6 +92,11 @@ def recognize_masuk():  # generate frame by frame from camera
                             
                     else:
                         cv2.putText(img, 'Anda telah absen', (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
+                        time.sleep(1)
+                        
+                    # Menutup koneksi
+                    mycursor.close()
+                    mydb.close()
                         
             else:
                 if not justscanned:
@@ -163,7 +135,6 @@ def recognize_masuk():  # generate frame by frame from camera
  
         key = cv2.waitKey(1)
         if key == 27:
-            db.close
             break
 
     

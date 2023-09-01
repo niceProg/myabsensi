@@ -107,6 +107,41 @@
                         </select>
                     </div>
                 </div>
+                <!-- Input Username -->
+                <div class="form-group row">
+                    <label
+                        for="username"
+                        class="col-sm-2 col-form-label"
+                        >Username</label
+                    >
+                    <div class="col-sm-8">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="username"
+                            name="username"
+                            required
+                        />
+                    </div>
+                </div>
+
+                <!-- Input Password -->
+                <div class="form-group row">
+                    <label
+                        for="password"
+                        class="col-sm-2 col-form-label"
+                        >Password</label
+                    >
+                    <div class="col-sm-8">
+                        <input
+                            type="password"
+                            class="form-control"
+                            id="password"
+                            name="password"
+                            required
+                        />
+                    </div>
+                </div>
                 <div class="form-group row">
                     <label class="col-sm-2 col-form-label"></label>
                     <div class="col-sm-8">
@@ -133,6 +168,9 @@
     src="https://code.jquery.com/jquery-3.5.1.js"
 ></script>
 
+<!-- SweetAlert2 -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+<script src="{{ url_for('static', filename='dashboard/js/addkary.js') }}"></script> -->
 <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
 
 {% endblock script %}

@@ -7,6 +7,15 @@
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css"
 />
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='home/alert.css') }}"
+/>
+<link
+    rel="stylesheet"
+    type="text/css"
+    href="https://cdn.datatables.net/v/dt/dt-1.10.25/datatables.min.css"
+/>
 
 {% endblock style %} {% block content %} {% include 'components/nav_dashboard.html' %}
 <div id="layoutSidenav">
@@ -15,16 +24,24 @@
 </div>
 
 {% endblock content %} {% block script %}
-<script
-    src="https://cdn.jsdelivr.net/npm/simple-datatables@latest"
-    type="text/javascript"
-></script>
-<script src="{{ url_for('static', filename='dashboard/js/datatables-simple-demo.js') }}"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<!-- Load DataTables JavaScript -->
+<script
+    type="text/javascript"
+    src="https://cdn.datatables.net/v/dt/dt-1.10.25/datatables.min.js"
+></script>
+<script src="{{ url_for('static', filename='dashboard/js/filter.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+<script>
+    function closeFlashMessages() {
+        var flashMessagesDiv = document.querySelector('.flash-messages');
+        if (flashMessagesDiv) {
+            flashMessagesDiv.style.display = 'none';
+        }
+    }
+</script>
 <script>
     var data_kehadiran = JSON.parse('{{ data_json|safe }}');
 

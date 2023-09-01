@@ -21,6 +21,7 @@
                     <a
                         class="btn btn-warning btn-lg"
                         href="{{ url_for('Dashboard.train_classifier', id=id) }}"
+                        data-redirect-url="{{ url_for('Dashboard.addprsn') }}"
                     >
                         Training
                     </a>
@@ -30,4 +31,7 @@
     </div>
 </div>
 
-{% endblock content %}
+{% endblock content %} {% block script %}
+<script src="https://unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js"></script>
+<script src="{{ url_for('static', filename='dashboard/js/addkary.js') }}"></script>
+{% endblock script %}

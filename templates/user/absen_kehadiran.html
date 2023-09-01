@@ -1,0 +1,118 @@
+{% extends 'layout/templates_user.html' %} {% block style %} {% endblock style %} {% block content %}
+<div class="layout-wrapper layout-content-navbar">
+    <div class="layout-container">
+        {% include 'components/sidenav_user.html' %}
+        <div class="layout-page">
+            {% include 'components/nav_user.html'%}
+            <div class="content-wrapper">
+                <div class="container-xxl flex-grow-1 container-p-y">
+                    <div class="row">
+                        <div class="col-12 col-lg-8 order-2 order-md-3 order-lg-2 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex flex-column align-items-center gap-3">
+                                        <h5>Hadapkan wajah pada kamera</h5>
+                                        <img
+                                            id="videoElement"
+                                            width="100%"
+                                            class="img-thumbnail"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-8 col-lg-4 order-3 order-md-2">
+                            <div class="row">
+                                <div class="col-12 mb-4">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between flex-sm-row flex-column gap-3">
+                                                <button
+                                                    class="btn btn-primary"
+                                                    id="aksesMasukButton"
+                                                    onclick="aksesMasuk()"
+                                                >
+                                                    <span class="tf-icons bx bx-camera"></span>&nbsp; Masuk
+                                                </button>
+                                                <button
+                                                    id="aksesPulangButton"
+                                                    onclick="aksesPulang()"
+                                                    class="btn btn-primary"
+                                                >
+                                                    <span class="tf-icons bx bx-camera"></span>&nbsp; Pulang
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between flex-sm-row flex-column gap-3">
+                                                <div class="card">
+                                                    <h5 class="card-header">Identitas Karyawan</h5>
+                                                    <div class="table-responsive text-nowrap">
+                                                        <table
+                                                            class="table"
+                                                            id="absensiTable"
+                                                        >
+                                                            <tbody class="table-border-bottom-0">
+                                                                <tr>
+                                                                    <th>Id Karyawan</th>
+                                                                    <td></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>Nama</th>
+                                                                    <td></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>Jabatan</th>
+                                                                    <td></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>Waktu Masuk</th>
+                                                                    <td></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>Waktu Pulang</th>
+                                                                    <td></td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div
+                                                id="infoKaryawan"
+                                                class="d-flex flex-column align-items-center gap-3"
+                                            ></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %} {% block script %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script src="{{ url_for('static', filename='user/main/js/notification.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    $(document).ready(function () {
+        checkNotificationForUser('{{ id_karyawan }}');
+    });
+</script>
+<script src="{{ url_for('static', filename='home/js/masuk.js') }}"></script>
+<script>
+    var Masuk = "{{ url_for('User.recog_masuk') }}";
+</script>
+<!-- <script src="{{ url_for('static', filename='user/main/js/reloadpage.js') }}"></script> -->
+<script>
+    var Pulang = "{{ url_for('User.recog_pulang') }}";
+</script>
+<script src="{{ url_for('static', filename='home/js/absen.js') }}"></script>
+{% endblock script %}

@@ -39,24 +39,22 @@
                                 <th>Jabatan</th>
                                 <th>NIDN / NIPY</th>
                                 <th>Jenis Kelamin</th>
-
-                                <th>Persentase Kehadiran</th>
-                                <th>Persentase Kehadiran Ganjil</th>
-                                <th>Persentase Kehadiran Genap</th>
+                                <th>Kehadiran Setiap Bulan</th>
+                                <th>Kehadiran Setiap Semester Ganjil</th>
+                                <th>Kehadiran Setiap Semester Genap</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for item in laporankehadiran %}
+                            {% for karyawan in laporankehadiran %}
                             <tr>
-                                <td>{{item[0]}}</td>
-                                <td>{{item[1]}}</td>
-                                <td>{{item[2]}}</td>
-                                <td>{{item[3]}}</td>
-                                <td>{{item[4]}}</td>
-
-                                <td>{{ '%.2f' % persentase_kehadiran}}%</td>
-                                <td>{{ '%.2f' % persentase_kehadiran_semester1}}%</td>
-                                <td>{{ '%.2f' % persentase_kehadiran_semester2}}%</td>
+                                <td>{{ karyawan.id }}</td>
+                                <td>{{ karyawan.nama }}</td>
+                                <td>{{ karyawan.jabatan }}</td>
+                                <td>{{ karyawan.nidn_nipy }}</td>
+                                <td>{{ karyawan.jenis_kelamin }}</td>
+                                <td>{{ '%.2f' % karyawan.persentase_kehadiran }}%</td>
+                                <td>{{ '%.2f' % karyawan.persentase_kehadiran_ganjil }}%</td>
+                                <td>{{ '%.2f' % karyawan.persentase_kehadiran_genap }}%</td>
                             </tr>
                             {% endfor %}
                         </tbody>

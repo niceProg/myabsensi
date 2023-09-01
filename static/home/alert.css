@@ -1,18 +1,59 @@
-.popup {
-    width: 300px;
-    height: 150px;
-    background-color: #fff;
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+/* Struktur Umum */
+.flash-messages {
     position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    max-width: 300px;
+}
+
+.flash-messages .alert {
+    position: relative;
+    padding: 15px 35px 15px 15px;
+    margin-bottom: 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    line-height: 1.4;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+/* Tombol Tutup (Close) */
+.flash-messages .alert .close-btn {
+    position: absolute;
+    right: 10px;
     top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.flash-messages .alert .close-btn:hover {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Warna Pesan */
+.alert-success {
+    background-color: #51a351;
+    color: white;
+}
+
+.alert-error {
+    background-color: #bd362f;
+    color: white;
+}
+
+.alert-info {
+    background-color: #2f96b4;
+    color: white;
+}
+
+.alert-warning {
+    background-color: #f89406;
+    color: white;
 }
